@@ -353,9 +353,10 @@ ESXDOS      MACRO service? : push hl : pop ix : rst $08 : db service? : ENDM    
 
 txtWait		defb	"Please wait:",0
 txtShrek	defb	"Main program: Shrek/MB Maniax",0
+txtPress	defb 	"    Press any key to continue",0
 txtBorik	defb 	"AY play rutines: mborik/SinDiKat",0
 txtThanks	defb	"Big thanks: ped7g, z00m, Logout",0
-txtVersion	defb 	"0.6",0
+txtVersion	defb 	"0.61",0
 demo:       di      
 
 F_OPEN                      equ $9A
@@ -641,7 +642,46 @@ skon
 			 ld hl,txtLFNinfo
 			 call print
 			 call getAllLFN	
+
+			ld 	hl,(numLoop)
+			ld de,18560+24	;pozice ve VideoRam
+			ld (NUMPOS+1),de
+			call DEC16		;vypiš číso HL - jaký soubor právě spracováváme
+			defw 20*256
+
+
+			ld de,20544+3+32+32 + 32 +32
+			ld hl,txtPress
+			call print
+
+cekej_na_klavesu
+
+			ld hl,22528+(32*22)
+
+			ld b,32
+brv			ld a,0
+			ld (hl),a
+			inc hl
+			djnz brv			
+			ld a,(brv+1)
+			inc a
+			cp 8
+			jr z,nuluj_barvu
+			
+			jr nenuluj_barvu
+nuluj_barvu			
+			xor a
+
+nenuluj_barvu
+			ld (brv+1),a
+			xor a
+			in a,(254)
+			cpl
+			and 31
+			jr z,cekej_na_klavesu
+
 			 call GETDIR
+
 			 ld hl,16384
 			 ld de,16385
 			 ld bc,6143
@@ -3393,7 +3433,7 @@ kk		ld (hl),a
 
               ret
 
-Versionn  defb "Version: 0.6",0
+Versionn  defb "Version: 0.61",0
 Cursors defb " ",0
 Play    defb "Main program: Shrek",0 
 NextPlay defb "AY routines: mborik",0
@@ -5247,10 +5287,30 @@ loopchecker equ 1
 ;5) insert official identificator
 id equ 1
 
-ATR
-         ld   bc,AY   ;Přečtení hlasitosti
-         out  (c),a   ;z AY
-         in   a,(c)
+ATR		
+		push de
+		ld (atr_kan+1),a
+        ld   bc,AY   ;Přečtení hlasitosti
+        out  (c),a   ;z AY
+        in   a,(c)
+		ld e,a	
+
+		ld a,254		;přepnutí na druhou AY
+		out (c),a
+
+atr_kan	ld 	a,0
+        out  (c),a   
+		in   a,(c)
+		ld d,a
+		
+		ld a,255
+		out (c),a
+
+		ld a,d
+		add a,e
+		rra
+
+		pop de
 		 push hl
 		 push af
 		 ld hl,ACBhlas
@@ -5504,7 +5564,6 @@ LOOP	HALT
 		ld a,(pocitadlo)
 		xor 100
 		jr z,.s3
-
 
 		ld a,(music_setup)
 		bit 7,a
